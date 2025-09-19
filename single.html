@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MediQueue - Smart Diagnostic Queue</title>
+  <style>
+    :root{
+      --blue:#1976d2;
+      --blue-dark:#115293;
+      --muted:#6b7280;
+      --bg:#f8fafc;
+      --card:#ffffff;
+      --success:#16a34a;
+      --warning:#d97706;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:var(--bg);
+      color:#111827;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      line-height:1.4;
+    }
+
+    /* container */
+    .container{max-width:1100px;margin:0 auto;padding:1rem;}
+
+    /* top bar */
+    .topbar{background:#fff;border-bottom:1px solid #e6eef7;position:sticky;top:0;z-index:40;}
+    .header-inner{display:flex;align-items:center;justify-content:space-between;gap:1rem;}
+    .brand{display:flex;align-items:center;gap:.7rem}
+    .logo-circle{width:40px;height:40px;border-radius:10px;background:var(--blue);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(25,118,210,.15);}
+    .title{font-size:1.15rem;color:var(--blue-dark);margin:0;font-weight:700}
+    .nav{display:flex;gap:.35rem}
+    .nav-btn{background:transparent;border:0;padding:.45rem .6rem;border-radius:8px;color:#64748b;font-weight:600;cursor:pointer;}
+    .nav-btn:hover{background:#f1f7ff;color:var(--blue-dark)}
+    .nav-btn.active{background:#eaf4ff;color:var(--blue-dark);box-shadow:0 1px 0 rgba(16,24,40,.04)}
+
+    /* main and cards */
+    .main{padding:2rem 1rem}
+    .card{background:var(--card);border-radius:12px;padding:1.25rem;box-shadow:0 6px 18px rgba(15,23,42,.06);margin-bottom:1rem;}
+    .card-sm{padding:.9rem;border-radius:10px}
+    .card-header.primary{background:var(--blue);color:#fff;padding:.8rem;border-radius:8px;margin:-1.25rem 0 1rem 0}
+
+    /* views toggle */
+    .view.hidden{display:none}
+
+    /* forms */
+    .form{display:flex;flex-direction:column;gap:.6rem}
+    .form label{font-size:.85rem;color:var(--muted)}
+    .form input,.form select{padding:.7rem .8rem;border-radius:10px;border:1px solid #e6eef7;font-size:1rem;outline:none;}
+    .form input:focus,.form select:focus{box-shadow:0 0 0 4px rgba(25,118,210,.08);border-color:var(--blue)}
+
+    .primary-btn{margin-top:.4rem;background:var(--blue);color:#fff;border:0;padding:.75rem;border-radius:10px;font-weight:700;cursor:pointer;}
+    .primary-btn:hover{background:var(--blue-dark)}
+    .link-btn{background:transparent;border:0;color:var(--blue);cursor:pointer;font-weight:600}
+    .center{text-align:center}
+    .mt-6{margin-top:1.5rem}.mt-10{margin-top:2.5rem}
+    .mt-4{margin-top:1rem}
+
+    .now-serving{margin-bottom:1rem}
+    .serving-card{display:flex;justify-content:space-between;align-items:center;padding:.8rem;border-radius:8px;background:#fff;box-shadow:0 3px 8px rgba(2,6,23,.04)}
+    .name.big{font-size:1.15rem;font-weight:700}
+    .queue-number{font-size:2rem;color:var(--blue);font-weight:800}
+
+    /* lists */
+    .list{display:flex;flex-direction:column;gap:.4rem}
+    .list .item{padding:.6rem;border-radius:8px;background:#fff;display:flex;justify-content:space-between;align-items:center;border:1px solid #f1f5f9}
+    .list .meta{font-size:.9rem;color:var(--muted)}
+    .empty{padding:1rem;color:var(--muted)}
+
+    /* admin */
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+    .stat{padding:1rem;border-radius:10px;background:#fff;box-shadow:0 4px 10px rgba(2,6,23,.04)}
+    .stat-num{font-size:1.6rem;font-weight:800;color:var(--blue)}
+
+    .admin-now{padding:.6rem;border-radius:8px;background:#fff;border:1px dashed #e6eef7}
+    .admin-now .big{font-size:1.3rem}
+
+    /* small buttons */
+    .btn-success{background:var(--success);color:#fff;border:0;padding:.55rem .8rem;border-radius:8px;cursor:pointer}
+    .btn-warning{background:var(--warning);color:#fff;border:0;padding:.55rem .8rem;border-radius:8px;cursor:pointer}
+    .primary-btn.full{width:100%}
+
+    /* toast */
+    .toast{position:fixed;right:1rem;top:64px;padding:.6rem 1rem;border-radius:8px;background:var(--blue);color:#fff;box-shadow:0 6px 18px rgba(2,6,23,.12);z-index:120;transition:transform .18s ease,opacity .18s ease}
+    .toast.hidden{opacity:0;transform:translateY(-6px);pointer-events:none}
+    .toast.show{opacity:1;transform:translateY(0);pointer-events:auto}
+
+    /* loading overlay */
+    .overlay{position:fixed;inset:0;background:rgba(2,6,23,.35);display:flex;align-items:center;justify-content:center;z-index:60}
+    .overlay.hidden{display:none}
+    .loader-card{background:#fff;padding:1rem 1.2rem;border-radius:10px;display:flex;align-items:center;gap:.6rem}
+    .spin{animation:spin 1s linear infinite}
+    @keyframes spin{100%{transform:rotate(360deg)}}
+
+    /* footer */
+    .footer{background:#fff;border-top:1px solid #e6eef7;padding:1rem;margin-top:2rem;text-align:center;color:var(--muted)}
+
+    /* responsive */
+    @media (max-width:900px){
+      .grid{grid-template-columns:repeat(1,1fr)}
+      .header-inner{flex-direction:column;align-items:flex-start;gap:.6rem}
+    }
+
+    /* small niceties */
+    .error{color:#b91c1c;font-size:.9rem;margin-top:.2rem}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container header-inner">
+      <div class="brand">
+        <div class="logo-circle" aria-hidden="true">
+          <!-- simple SVG health logo -->
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path fill="#fff" d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 3 3v1h-1v6a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-6H3V10a3 3 0 0 1 3-3h1V6a4 4 0 0 1 4-4z"/>
+          </svg>
+        </div>
+        <h1 class="title">MediQueue</h1>
+      </div>
+
+      <nav class="nav" aria-label="Main navigation">
+        <button class="nav-btn" data-view="registration">Registration</button>
+        <button class="nav-btn" data-view="queue">Queue Status</button>
+        <button class="nav-btn" data-view="admin">Admin</button>
+      </nav>
+
+      <div class="auth-actions" id="authActions">
+        <!-- admin login button injected here -->
+      </div>
+    </div>
+  </header>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <main class="container main">
+    <!-- Registration View -->
+    <section id="registrationView" class="card view">
+      <h2>Patient Registration</h2>
+      <form id="patientForm" class="form" autocomplete="off">
+        <label>Full Name *</label>
+        <input id="pName" type="text" placeholder="Enter full name" required />
+        <label>Phone Number *</label>
+        <input id="pPhone" type="tel" placeholder="Enter phone number" required />
+        <label>Test Type</label>
+        <select id="pTestType">
+          <option>Blood Test</option>
+          <option>X-Ray</option>
+          <option>Ultrasound</option>
+          <option>MRI</option>
+          <option>CT Scan</option>
+          <option>ECG</option>
+        </select>
+        <button id="joinQueueBtn" type="submit" class="primary-btn">Join Queue</button>
+      </form>
+      <div class="mt-10 center">
+        <button class="link-btn" data-view="queue">View Current Queue Status →</button>
+      </div>
+    </section>
+
+    <!-- Queue Status View -->
+    <section id="queueView" class="card view hidden">
+      <h2>Current Queue Status</h2>
+
+      <div id="nowServing" class="now-serving hidden card-sm" aria-live="polite">
+        <h3>Now Serving</h3>
+        <div class="serving-card">
+          <div>
+            <div id="nowName" class="name big"></div>
+            <div id="nowTest" class="meta"></div>
+          </div>
+          <div id="nowNumber" class="queue-number big">#1</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header primary">
+          <h3>Waiting Patients</h3>
+        </div>
+        <div id="waitingList" class="list"></div>
+        <div id="noWaiting" class="empty center">No patients currently waiting in queue.</div>
+      </div>
+
+      <div class="mt-10 center">
+        <button class="link-btn" data-view="registration">← Register as a new patient</button>
+      </div>
+    </section>
+
+    <!-- Admin View (Login or Panel) -->
+    <section id="adminView" class="card view hidden">
+      <div id="adminLoginCard" class="card-inner">
+        <h2>Admin Login</h2>
+        <form id="adminLoginForm" class="form" autocomplete="off">
+          <label>Email</label>
+          <input id="adminEmail" type="email" placeholder="admin@example.com" required />
+          <label>Password</label>
+          <input id="adminPassword" type="password" placeholder="Password" required />
+          <div id="loginError" class="error" role="alert"></div>
+          <button id="adminSignInBtn" type="submit" class="primary-btn">Sign In</button>
+        </form>
+      </div>
+
+      <div id="adminPanel" class="hidden">
+        <h2>Queue Management</h2>
+        <div class="grid">
+          <div class="stat card-sm">
+            <h4>Total in Queue</h4>
+            <div id="statTotal" class="stat-num">0</div>
+          </div>
+          <div class="stat card-sm">
+            <h4>Waiting</h4>
+            <div id="statWaiting" class="stat-num">0</div>
+          </div>
+          <div class="stat card-sm">
+            <h4>Now Serving</h4>
+            <div id="statServing" class="stat-num">0</div>
+          </div>
+        </div>
+
+        <div class="grid mt-6">
+          <div class="card p-4">
+            <h4>Now Serving</h4>
+            <div id="adminNow" class="admin-now empty">No patient currently being served</div>
+            <div id="adminNowActions" class="mt-4 center hidden">
+              <button id="markDoneBtn" class="btn-success">Mark Done</button>
+              <button id="skipBtn" class="btn-warning">Skip</button>
+            </div>
+            <div id="callNextWrap" class="mt-4">
+              <button id="callNextBtn" class="primary-btn full">Call Next Patient</button>
+            </div>
+          </div>
+
+          <div id="queueListAdmin" class="card p-4">
+            <h4>Queue List</h4>
+            <div id="adminList" class="list"></div>
+            <div id="adminEmpty" class="empty">No patients in queue</div>
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <button id="adminLogoutBtn" class="link-btn">Logout</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Loading overlay -->
+  <div id="loadingOverlay" class="overlay hidden" aria-hidden="true">
+    <div class="loader-card" role="status" aria-live="polite">
+      <svg class="spin" viewBox="0 0 50 50" width="36" height="36">
+        <circle cx="25" cy="25" r="20" fill="none" stroke="#1976d2" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+      <div>Processing...</div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container center">© <span id="year"></span> MediQueue - Smart Diagnostic Queue Management System</div>
+  </footer>
+
+  <!-- Firebase + App JS -->
+  <script type="module">
+    // Use same firebase version for all imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      onSnapshot,
+      updateDoc,
+      doc,
+      query,
+      orderBy,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+
+    /***** CONFIG *****
+    Replace values with your Firebase project's config if different.
+    Note: storageBucket must be <PROJECT>.appspot.com
+    *******************/
+    const firebaseConfig = {
+      apiKey: "AIzaSyCI_RGUnikOuUZYVp9hXaJElbiAWKEZMDE",
+      authDomain: "mediqueue-64a74.firebaseapp.com",
+      projectId: "mediqueue-64a74",
+      storageBucket: "mediqueue-64a74.appspot.com",
+      messagingSenderId: "831314942153",
+      appId: "1:831314942153:web:720284796009eb610cd518"
+    };
+
+    // DOM refs
+    const views = {
+      registration: document.getElementById("registrationView"),
+      queue: document.getElementById("queueView"),
+      admin: document.getElementById("adminView")
+    };
+    const navButtons = document.querySelectorAll(".nav-btn");
+    const viewButtons = document.querySelectorAll("[data-view]");
+    const toastEl = document.getElementById("toast");
+    const loadingOverlay = document.getElementById("loadingOverlay");
+    const yearSpan = document.getElementById("year");
+    yearSpan.textContent = new Date().getFullYear();
+
+    const patientForm = document.getElementById("patientForm");
+    const pName = document.getElementById("pName");
+    const pPhone = document.getElementById("pPhone");
+    const pTestType = document.getElementById("pTestType");
+
+    const waitingList = document.getElementById("waitingList");
+    const nowServingWrap = document.getElementById("nowServing");
+    const nowName = document.getElementById("nowName");
+    const nowTest = document.getElementById("nowTest");
+    const nowNumber = document.getElementById("nowNumber");
+    const noWaiting = document.getElementById("noWaiting");
+
+    const adminLoginForm = document.getElementById("adminLoginForm");
+    const adminEmail = document.getElementById("adminEmail");
+    const adminPassword = document.getElementById("adminPassword");
+    const adminPanel = document.getElementById("adminPanel");
+    const adminLoginCard = document.getElementById("adminLoginCard");
+    const loginError = document.getElementById("loginError");
+    const authActions = document.getElementById("authActions");
+
+    const statTotal = document.getElementById("statTotal");
+    const statWaiting = document.getElementById("statWaiting");
+    const statServing = document.getElementById("statServing");
+    const adminNow = document.getElementById("adminNow");
+    const adminNowActions = document.getElementById("adminNowActions");
+    const callNextBtn = document.getElementById("callNextBtn");
+    const markDoneBtn = document.getElementById("markDoneBtn");
+    const skipBtn = document.getElementById("skipBtn");
+    const queueListAdmin = document.getElementById("adminList");
+    const adminEmpty = document.getElementById("adminEmpty");
+    const adminLogoutBtn = document.getElementById("adminLogoutBtn");
+    const adminSignInBtn = document.getElementById("adminSignInBtn");
+
+    // state
+    let patients = [];
+    let currentUser = null;
+
+    // UI helpers
+    function showView(name){
+      Object.keys(views).forEach(k => {
+        if(k === name) views[k].classList.remove("hidden");
+        else views[k].classList.add("hidden");
+      });
+      navButtons.forEach(b => {
+        const v = b.dataset.view;
+        b.classList.toggle("active", v === name);
+      });
+    }
+    function showToast(msg, time = 3500){
+      toastEl.textContent = msg;
+      toastEl.classList.remove("hidden");
+      toastEl.classList.add("show");
+      // ensure hide any existing timer
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(()=> {
+        toastEl.classList.remove("show");
+        toastEl.classList.add("hidden");
+      }, time);
+    }
+    function setLoading(on){
+      if(on){
+        loadingOverlay.classList.remove("hidden");
+        loadingOverlay.setAttribute("aria-hidden","false");
+      } else {
+        loadingOverlay.classList.add("hidden");
+        loadingOverlay.setAttribute("aria-hidden","true");
+      }
+    }
+
+    // nav wiring
+    navButtons.forEach(btn => {
+      const v = btn.dataset.view;
+      if(v) btn.addEventListener("click", ()=> showView(v));
+    });
+    viewButtons.forEach(btn => {
+      btn.addEventListener("click", (e)=> {
+        const v = btn.dataset.view;
+        if(v) showView(v);
+      });
+    });
+
+    // init firebase with safe try/catch
+    let app, db, auth;
+    try {
+      app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+      auth = getAuth(app);
+    } catch(initErr){
+      console.error("Firebase init error:", initErr);
+      showToast("Firebase initialization failed. Check console.");
+      // keep running but Firestore dependent features won't work
+    }
+
+    // only attach realtime listener if db defined
+    if(db){
+      try {
+        const qRef = query(collection(db, "queue"), orderBy("timestamp", "asc"));
+        onSnapshot(qRef, (snapshot) => {
+          const arr = [];
+          snapshot.forEach((d, idx) => {
+            const data = d.data();
+            arr.push({
+              id: d.id,
+              name: data.name || "",
+              phone: data.phone || "",
+              testType: data.testType || "",
+              status: data.status || "waiting",
+              timestamp: data.timestamp || null,
+              queueNumber: idx + 1
+            });
+          });
+          patients = arr;
+          renderAll();
+        }, (err) => {
+          console.error("onSnapshot error:", err);
+          showToast("Realtime update error. Check console.");
+          // still attempt to render whatever local state exists
+          renderAll();
+        });
+      } catch(e){
+        console.error("Failed to attach snapshot listener:", e);
+        showToast("Failed to start realtime listener.");
+      }
+    } else {
+      // no db: show helpful toast so user knows why "Processing.." may stick
+      showToast("No Firestore connection. Check config or network.");
+    }
+
+    // rendering
+    function renderAll(){
+      renderQueueView();
+      renderAdminPanel();
+      renderStats();
+    }
+    function renderQueueView(){
+      const current = patients.find(p => p.status === "serving");
+      if(current){
+        nowServingWrap.classList.remove("hidden");
+        nowName.textContent = current.name;
+        nowTest.textContent = `${current.testType} • ${current.phone}`;
+        nowNumber.textContent = `#${current.queueNumber}`;
+      } else {
+        nowServingWrap.classList.add("hidden");
+      }
+
+      const waiting = patients.filter(p => p.status === "waiting");
+      waitingList.innerHTML = "";
+      if(waiting.length === 0){
+        noWaiting.classList.remove("hidden");
+      } else {
+        noWaiting.classList.add("hidden");
+        waiting.forEach(p => {
+          const item = document.createElement("div");
+          item.className = "item";
+          item.innerHTML = `
+            <div>
+              <div class="name">${escapeHtml(p.name)}</div>
+              <div class="meta">${escapeHtml(p.testType)} • ${escapeHtml(p.phone)}</div>
+            </div>
+            <div class="queue-number">#${p.queueNumber}</div>
+          `;
+          waitingList.appendChild(item);
+        });
+      }
+    }
+
+    function renderAdminPanel(){
+      queueListAdmin.innerHTML = "";
+      if(patients.length === 0){
+        adminEmpty.classList.remove("hidden");
+      } else {
+        adminEmpty.classList.add("hidden");
+        patients.forEach(p => {
+          const li = document.createElement("div");
+          li.className = "item";
+          const statusBadge = `<span class="meta">${escapeHtml(p.status)}</span>`;
+          li.innerHTML = `
+            <div>
+              <div class="name">#${p.queueNumber} ${escapeHtml(p.name)}</div>
+              <div class="meta">${escapeHtml(p.testType)}</div>
+            </div>
+            ${statusBadge}
+          `;
+          queueListAdmin.appendChild(li);
+        });
+      }
+
+      const current = patients.find(p => p.status === "serving");
+      if(current){
+        adminNow.textContent = `#${current.queueNumber} ${current.name} — ${current.testType} • ${current.phone}`;
+        adminNowActions.classList.remove("hidden");
+        document.getElementById("adminNow").classList.remove("empty");
+      } else {
+        adminNow.textContent = "No patient currently being served";
+        adminNowActions.classList.add("hidden");
+        document.getElementById("adminNow").classList.add("empty");
+      }
+      adminEmpty.classList.toggle("hidden", patients.length !== 0);
+    }
+
+    function renderStats(){
+      statTotal.textContent = String(patients.length);
+      statWaiting.textContent = String(patients.filter(p => p.status === "waiting").length);
+      statServing.textContent = String(patients.some(p => p.status === "serving") ? 1 : 0);
+    }
+
+    // registration submit
+    patientForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = pName.value.trim();
+      const phone = pPhone.value.trim();
+      const testType = pTestType.value;
+
+      if(!name || !phone){
+        showToast("Please fill all required fields");
+        return;
+      }
+      if(!db){
+        showToast("No Firestore connection. Cannot register.");
+        return;
+      }
+
+      setLoading(true);
+      try {
+        await addDoc(collection(db, "queue"), {
+          name,
+          phone,
+          testType,
+          status: "waiting",
+          timestamp: serverTimestamp()
+        });
+        pName.value = "";
+        pPhone.value = "";
+        pTestType.value = "Blood Test";
+        showToast("Registration successful! Please wait for your turn.");
+      } catch(err){
+        console.error("Add doc error:", err);
+        showToast("Error submitting form. Check console.");
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    // admin login/logout
+    adminLoginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      loginError.textContent = "";
+      if(!auth){
+        loginError.textContent = "No Auth connection";
+        return;
+      }
+      setLoading(true);
+      try {
+        await signInWithEmailAndPassword(auth, adminEmail.value.trim(), adminPassword.value);
+        adminEmail.value = ""; adminPassword.value = "";
+        showView("admin");
+      } catch(err){
+        console.error("SignIn error:", err);
+        loginError.textContent = err.message || "Invalid credentials";
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    adminLogoutBtn.addEventListener("click", async () => {
+      if(!auth) return;
+      try {
+        await signOut(auth);
+        showView("registration");
+      } catch(e){
+        console.error("SignOut error:", e);
+        showToast("Logout failed");
+      }
+    });
+
+    // observe auth state
+    if(typeof onAuthStateChanged === "function" && auth){
+      onAuthStateChanged(auth, (u) => {
+        currentUser = u;
+        updateAuthUI();
+      });
+    } else {
+      // no auth available
+      updateAuthUI();
+    }
+
+    function updateAuthUI(){
+      authActions.innerHTML = "";
+      if(currentUser){
+        adminLoginCard.classList.add("hidden");
+        adminPanel.classList.remove("hidden");
+        const btn = document.createElement("button");
+        btn.textContent = "Logout";
+        btn.className = "nav-btn";
+        btn.addEventListener("click", async ()=> {
+          try { await signOut(auth); } catch(e){ console.error(e) }
+        });
+        authActions.appendChild(btn);
+      } else {
+        adminLoginCard.classList.remove("hidden");
+        adminPanel.classList.add("hidden");
+        const btn = document.createElement("button");
+        btn.textContent = "Admin Login";
+        btn.className = "nav-btn";
+        btn.addEventListener("click", ()=> showView("admin"));
+        authActions.appendChild(btn);
+      }
+    }
+
+    // admin actions
+    callNextBtn.addEventListener("click", async () => {
+      const waiting = patients.filter(p => p.status === "waiting");
+      if(waiting.length === 0){
+        showToast("No waiting patients");
+        return;
+      }
+      if(!db){ showToast("No DB connection"); return; }
+      setLoading(true);
+      try {
+        const next = waiting[0];
+        const ref = doc(db, "queue", next.id);
+        await updateDoc(ref, { status: "serving" });
+        showToast(`Now serving: ${next.name}`);
+      } catch(err){
+        console.error("CallNext error:", err);
+        showToast("Failed to call next");
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    markDoneBtn.addEventListener("click", async () => {
+      const current = patients.find(p => p.status === "serving");
+      if(!current){ showToast("No serving patient"); return; }
+      if(!db){ showToast("No DB connection"); return; }
+      setLoading(true);
+      try {
+        const ref = doc(db, "queue", current.id);
+        await updateDoc(ref, { status: "completed" });
+        showToast(`Marked done: ${current.name}`);
+      } catch(err){
+        console.error("MarkDone error:", err);
+        showToast("Failed to update");
+      } finally { setLoading(false); }
+    });
+
+    skipBtn.addEventListener("click", async () => {
+      const current = patients.find(p => p.status === "serving");
+      if(!current){ showToast("No serving patient"); return; }
+      if(!db){ showToast("No DB connection"); return; }
+      setLoading(true);
+      try {
+        const ref = doc(db, "queue", current.id);
+        await updateDoc(ref, { status: "skipped" });
+        showToast(`Skipped: ${current.name}`);
+      } catch(err){
+        console.error("Skip error:", err);
+        showToast("Failed to skip");
+      } finally { setLoading(false); }
+    });
+
+    function escapeHtml(s){
+      return String(s || "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+    }
+
+    // default view
+    showView("registration");
+
+    // keyboard
+    document.addEventListener("keydown", (e) => {
+      if(e.key === "Escape") showView("registration");
+    });
+
+    // initial small check: if Firebase config seems wrong, show console hint
+    (function sanityCheckConfig(){
+      if(firebaseConfig.storageBucket && !firebaseConfig.storageBucket.includes('.appspot.com')){
+        console.warn("storageBucket looks unusual:", firebaseConfig.storageBucket);
+        showToast("Warning: storageBucket may be incorrect (check console).", 5000);
+      }
+    })();
+
+    // helpful global error handler for unexpected exceptions
+    window.addEventListener("error", (ev) => {
+      console.error("Window error:", ev.error || ev.message);
+      showToast("Unexpected error occurred. Check console.");
+      setLoading(false);
+    });
+    window.addEventListener("unhandledrejection", (ev) => {
+      console.error("Unhandled rejection:", ev.reason);
+      showToast("Background error. Check console.");
+      setLoading(false);
+    });
+
+  </script>
+</body>
+</html>
